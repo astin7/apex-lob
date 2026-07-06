@@ -1,0 +1,11 @@
+# Ignore the Python virtual environment
+.venv/
+
+# Ignore CMake and C++ build artifacts
+build/
+*.pyd
+*.lib
+*.exp
+*.sln
+*.vcxproj
+*.filters

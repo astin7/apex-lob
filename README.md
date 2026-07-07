@@ -66,8 +66,10 @@ apex-lob/
 *   CMake 3.18+
 *   MSVC v142+ / GCC 10+ Compiler supporting C++20
 *   NVIDIA CUDA Toolkit 11.0+ & compatible GPU
+*   Python 3.10+
 
 ### Execution Compilation Sequence
+
 
 1. **Clone the repository:**
    ```bash
@@ -75,24 +77,37 @@ apex-lob/
    cd apex-lob
    ```
 
-2. **Generate the build system and force clean compile:**
+2. **Initialize Python Environment & Dependencies:**
+   ```powershell
+   # Create virtual environment
+   python -m venv .venv
+   
+   # Activate virtual environment
+   .\.venv\Scripts\Activate.ps1
+   
+   # Upgrade pip and install runtime libraries
+   python -m pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+3. **Generate the build system and force clean compile:**
    ```powershell
    cmake -B build -S .
    cmake --build build --config Release --clean-first
    ```
 
-3. **Route the built binary artifact directly into the runtime suite:**
+4. **Route the built binary artifact directly into the runtime suite:**
    ```powershell
    Copy-Item .\build\Release\apex_lob*.pyd .\python\
    ```
 
-4. **Launch the live terminal trading grid:**
+5. **Launch the live terminal trading grid:**
    ```powershell
    cd python
    python terminal_ui.py
    ```
 
-5. **Run the hardware nanosecond latency benchmarking script:**
+6. **Run the hardware nanosecond latency benchmarking script:**
    ```powershell
    python benchmark.py
    ```

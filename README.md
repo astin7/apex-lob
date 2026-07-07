@@ -4,21 +4,21 @@ An ultra-low latency, hybrid CPU/GPU Limit Order Book (LOB) matching engine buil
 
 ![Latency Distribution](latency_distribution.png)
 
-## 🚀 Engineering Highlights
+## Engineering Highlights
 
 *   **Zero-Allocation Memory Engine:** Employs continuous array-backed price levels and strictly enforced **64-byte L3 cache-line boundaries (`alignas(64)`)**. This completely bypasses standard OS heap allocations (`malloc`/`new`) and prevents false sharing, optimizing for the AMD Ryzen 7 9800X3D V-Cache architecture.
 *   **Vectorized Data Ingestion:** Leverages **AVX-512 compiler intrinsics** (Single Instruction, Multiple Data) to ingest and unpack raw binary market byte streams directly from mock feeds without CPU branching delays.
 *   **GPU-Accelerated Risk Core:** Offloads multi-variable position and boundary safety validations to an **NVIDIA RTX 3090 via custom CUDA kernels**, running massive block-wide parallel validation before order matching.
 *   **Hybrid Execution Architecture:** Decouples low-level performance-critical systems code from high-level data reporting via highly optimized **PyBind11** modules.
 
-## 🛠️ Technical Stack
+## Technical Stack
 
 *   **Core Logic:** C++20 (Compiled via CMake & MSVC)
 *   **Hardware Acceleration:** CUDA C++ (NVIDIA GPU API), AVX-512 SIMD
 *   **Memory & Profiling:** `std::chrono` (Hardware Time Stamp Counters), Cache-Aligned Arrays
 *   **Interface & Bridging:** Python 3.14+, PyBind11, `rich` (Terminal CLI), `matplotlib` / `numpy` (Latency Micro-benchmarking)
 
-## 🏛️ Architecture & Core Pipeline
+## Architecture & Core Pipeline
 
 ```text
 [Binary Market Feed] ──> [SIMD Parser: AVX-512] ──> [CUDA Kernels: Pre-Trade Risk]
@@ -32,7 +32,7 @@ An ultra-low latency, hybrid CPU/GPU Limit Order Book (LOB) matching engine buil
 *   **Matching Engine (C++20):** Utilizes flat memory vectors representing the Price-Time Priority (FIFO) queue, preventing the OS from pausing the thread to search the RAM heap.
 *   **Visualization Layer (Python & Rich):** Multi-threaded terminal UI isolating high-overhead rendering from the nanosecond-critical execution path.
 
-## 📊 Performance Metrics & Dashboard Capabilities
+## Performance Metrics & Dashboard Capabilities
 
 Micro-benchmarked on an **AMD Ryzen 7 9800X3D** and an **NVIDIA RTX 3090 GPU**:
 
@@ -40,7 +40,7 @@ Micro-benchmarked on an **AMD Ryzen 7 9800X3D** and an **NVIDIA RTX 3090 GPU**:
 *   **Throughput Engine:** Processes simulated high-volatility market crashes (10,000,000 orders / 4,900,000 executed trades) at sustained rates of **185,000+ operations per second** concurrently with full real-time rendering.
 *   **Live Dashboard:** A high-performance, dark-mode CLI displaying real-time Level 3 metrics including Best Bid/Ask, total volume cleared, rested liquidity, and active hardware statuses.
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```plaintext
 apex-lob/
@@ -59,7 +59,7 @@ apex-lob/
     └── benchmark.py       # High-resolution hardware latency profiler
 ```
 
-## ⚙️ Build & Installation
+## Build & Installation
 
 ### Prerequisites
 *   Windows 10/11 with Developer Mode or Linux Environment

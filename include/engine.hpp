@@ -1,69 +1,118 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <chrono>
+#pragma once
 #include "parser.hpp"
-#include "engine.hpp"
-#include "risk_engine.hpp" 
+#include <vector>
+#include <iostream>
+#include <algorithm>
 
-namespace py = pybind11;
+struct alignas(64) PriceLevel {
+    uint32_t price;
+    uint32_t total_volume;
+    std::vector<RawOrder> order_queue; 
 
-std::vector<RawOrder> parse_python_bytes(py::bytes python_bytes) {
-    std::string str_bytes = python_bytes;
-    const uint8_t* buffer = reinterpret_cast<const uint8_t*>(str_bytes.data());
-    size_t length = str_bytes.size();
+    PriceLevel() : price(0), total_volume(0) {}
+};
 
-    std::vector<RawOrder> orders;
-    SIMDParser::parse_buffer(buffer, length, orders);
+class OrderBook {
+private:
+    std::vector<PriceLevel> bids; 
+    std::vector<PriceLevel> asks; 
     
-    return orders;
-}
-
-std::vector<bool> execute_gpu_risk_checks(const std::vector<RawOrder>& orders) {
-    std::vector<uint8_t> raw_results;
-    run_cuda_risk_checks(orders, raw_results);
-    std::vector<bool> results(raw_results.begin(), raw_results.end());
-    return results;
-}
-
-// Hardware Benchmarking Loop
-std::vector<double> benchmark_engine(OrderBook& engine, const std::vector<RawOrder>& orders) {
-    std::vector<double> latencies;
-    latencies.reserve(orders.size());
+    uint32_t best_bid = 0;
+    uint32_t best_ask = 20000; 
     
-    for (const auto& order : orders) {
-        // Start the nanosecond clock
-        auto start = std::chrono::high_resolution_clock::now();
-        
-        engine.process_order(order);
-        
-        // Stop the clock and record the duration
-        auto end = std::chrono::high_resolution_clock::now();
-        latencies.push_back(std::chrono::duration<double, std::nano>(end - start).count());
+    uint64_t total_bids_rested = 0;
+    uint64_t total_asks_rested = 0;
+    
+    uint64_t total_trades_executed = 0;
+    uint64_t total_volume_executed = 0;
+
+public:
+    OrderBook() {
+        bids.resize(20000);
+        asks.resize(20000);
+
+        for(int i = 15000; i <= 15100; ++i) {
+            bids[i].order_queue.reserve(100000);
+            asks[i].order_queue.reserve(100000);
+        }
     }
-    
-    // Blast the array of latencies back to Python
-    return latencies; 
-}
 
-PYBIND11_MODULE(apex_lob, m) {
-    py::class_<RawOrder>(m, "RawOrder")
-        .def_readonly("order_id", &RawOrder::order_id)
-        .def_readonly("price", &RawOrder::price)
-        .def_readonly("quantity", &RawOrder::quantity)
-        .def_readonly("side", &RawOrder::side);
+    void process_order(const RawOrder& incoming_order) {
+        uint32_t price = incoming_order.price;
+        uint32_t remaining_qty = incoming_order.quantity;
 
-    py::class_<OrderBook>(m, "OrderBook")
-        .def(py::init<>())
-        .def("process_order", &OrderBook::process_order)
-        .def("get_total_bids", &OrderBook::get_total_bids)
-        .def("get_total_asks", &OrderBook::get_total_asks)
-        .def("get_total_trades", &OrderBook::get_total_trades)
-        .def("get_volume_executed", &OrderBook::get_volume_executed)
-        .def("get_best_bid", &OrderBook::get_best_bid)
-        .def("get_best_ask", &OrderBook::get_best_ask);
+        if (incoming_order.side == 'B') {
+            while (remaining_qty > 0 && best_ask <= price) {
+                PriceLevel& ask_level = asks[best_ask];
+                
+                if (ask_level.total_volume > 0) {
+                    uint32_t fill_qty = std::min(remaining_qty, ask_level.total_volume);
+                    remaining_qty -= fill_qty;
+                    ask_level.total_volume -= fill_qty;
+                    
+                    total_trades_executed++;
+                    total_volume_executed += fill_qty;
+                    
+                    if (ask_level.total_volume == 0) {
+                        ask_level.order_queue.clear();
+                    }
+                }
+                
+                if (ask_level.total_volume == 0) {
+                    best_ask++;
+                    if(best_ask >= 20000) break;
+                }
+            }
 
-    m.def("parse_bytes", &parse_python_bytes, "Parse a raw binary stream using AVX-512");
-    m.def("gpu_risk_check", &execute_gpu_risk_checks, "Run pre-trade risk checks on the RTX 3090");
-    
-    m.def("benchmark_engine", &benchmark_engine, "Measure per-order nanosecond latency");
-}
+            if (remaining_qty > 0) {
+                bids[price].price = price;
+                bids[price].order_queue.push_back(incoming_order);
+                bids[price].total_volume += remaining_qty;
+                total_bids_rested++;
+                
+                if (price > best_bid) {
+                    best_bid = price;
+                }
+            }
+        } else {
+            while (remaining_qty > 0 && best_bid >= price && best_bid > 0) {
+                PriceLevel& bid_level = bids[best_bid];
+                
+                if (bid_level.total_volume > 0) {
+                    uint32_t fill_qty = std::min(remaining_qty, bid_level.total_volume);
+                    remaining_qty -= fill_qty;
+                    bid_level.total_volume -= fill_qty;
+                    
+                    total_trades_executed++;
+                    total_volume_executed += fill_qty;
+                    
+                    if (bid_level.total_volume == 0) {
+                        bid_level.order_queue.clear();
+                    }
+                }
+                
+                if (bid_level.total_volume == 0) {
+                    best_bid--;
+                }
+            }
+
+            if (remaining_qty > 0) {
+                asks[price].price = price;
+                asks[price].order_queue.push_back(incoming_order);
+                asks[price].total_volume += remaining_qty;
+                total_asks_rested++;
+                
+                if (price < best_ask) {
+                    best_ask = price;
+                }
+            }
+        }
+    }
+
+    uint64_t get_total_bids() const { return total_bids_rested; }
+    uint64_t get_total_asks() const { return total_asks_rested; }
+    uint64_t get_total_trades() const { return total_trades_executed; }
+    uint64_t get_volume_executed() const { return total_volume_executed; }
+    uint32_t get_best_bid() const { return best_bid; }
+    uint32_t get_best_ask() const { return best_ask; }
+};

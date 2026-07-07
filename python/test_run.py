@@ -8,7 +8,7 @@ def generate_mock_binary_data(num_orders):
     
     print(f"Generating {num_orders:,} mock binary orders...")
     for i in range(num_orders):
-        # Intentionally inject a few invalid "fat-finger" orders to test the GPU risk logic
+        # Intentionally inject a few invalid fat-finger orders to test the GPU risk logic
         qty = 999_999 if (i == 500_000 or i == 5_000_000) else 100
         side = b'B' if i % 2 == 0 else b'S'
         byte_array.extend(order_format.pack(i, 15000 + (i % 100), qty, side))
@@ -29,7 +29,7 @@ def run_pipeline():
     print(f"Transferring data to VRAM & spawning 10,000,000 GPU threads...")
     start_gpu = time.perf_counter()
     
-    # Fire data at the RTX 3090
+    # Throw data at the RTX 3090
     risk_results = apex_lob.gpu_risk_check(parsed_orders)
     
     gpu_time = time.perf_counter() - start_gpu
@@ -44,7 +44,8 @@ def run_pipeline():
     
     start_route = time.perf_counter()
     for i, order in enumerate(parsed_orders):
-        if risk_results[i]: # Only process if the GPU marked it valid
+        # Only process if the GPU marked it valid
+        if risk_results[i]:
             lob.process_order(order)
     route_time = time.perf_counter() - start_route
     

@@ -68,7 +68,9 @@ def run_terminal():
     lob = apex_lob.OrderBook()
     
     # Live UI Loop
-    chunk_size = 10_000 # Process 10k orders per UI refresh
+
+    # Process 10k orders per UI refresh
+    chunk_size = 10_000
     start_time = time.perf_counter()
     
     with Live(make_layout(lob, total_orders, 0, start_time), refresh_per_second=15, screen=True) as live:
@@ -83,7 +85,9 @@ def run_terminal():
             # Update the screen
             processed = min(i + chunk_size, total_orders)
             live.update(make_layout(lob, total_orders, processed, start_time))
-            time.sleep(0.05) # Artificial throttle so you can actually watch it
+
+            # Artificial throttle so you can actually watch it
+            time.sleep(0.05)
 
 if __name__ == "__main__":
     run_terminal()

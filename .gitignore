@@ -1,11 +1,18 @@
-# Ignore the Python virtual environment
+# Python Environment & Cache
 .venv/
+__pycache__/
+*.py[cod]
 
-# Ignore CMake and C++ build artifacts
+# CMake and C++ Build 
 build/
 *.pyd
 *.lib
 *.exp
 *.sln
 *.vcxproj
-*.filters
+*.vcxproj.filters
+*.vcxproj.user
+
+# IDEs and Editors
+.vs/
+.vscode/

@@ -78,7 +78,7 @@ public:
                 }
             }
         } else {
-            // Crossing Logic: Check if the seller's price is <= the highest buyer
+            // Crossing Logic, so check if the seller's price is <= the highest buyer
             while (remaining_qty > 0 && best_bid >= price && best_bid > 0) {
                 PriceLevel& bid_level = bids[best_bid];
                 
@@ -119,4 +119,6 @@ public:
     uint64_t get_total_asks() const { return total_asks_rested; }
     uint64_t get_total_trades() const { return total_trades_executed; }
     uint64_t get_volume_executed() const { return total_volume_executed; }
+    uint32_t get_best_bid() const { return best_bid; }
+    uint32_t get_best_ask() const { return best_ask; }
 };

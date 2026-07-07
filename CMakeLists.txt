@@ -14,13 +14,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pybind11)
 
-# UPDATE: Point CMake to the new 'src/' subdirectory paths
+# Point CMake to the new 'src/' subdirectory paths
 pybind11_add_module(apex_lob 
     src/main.cpp 
     src/risk_engine.cu
 )
 
-# UPDATE: Tell the compiler where the public 'include/' headers live
+# Tell the compiler where the public 'include/' headers live
 target_include_directories(apex_lob PRIVATE include)
 
 # Link the CUDA toolkit libraries for the RTX 3090
